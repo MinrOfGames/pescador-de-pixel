@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pescador de Pixels - Menu de Nick Antigo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', Courier, monospace; 
+            margin: 0;
+            padding: 0;
+            background-color: #0A0A1E; 
+            color: #F0F0F0; 
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            border: none; 
+            background-color: #004070; 
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            touch-action: none;
+            display: block; 
+        }
+        .game-ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 15px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(10, 10, 30, 0.9); 
+            z-index: 10;
+            font-size: clamp(0.6rem, 2vw, 0.9rem); 
+            color: #D0D0FF; 
+            border-bottom: 2px solid #303050; 
+            box-sizing: border-box;
+        }
+        .ui-left, .ui-center, .ui-right {
+            display: flex;
+            gap: 15px; 
+            align-items: center;
+        }
+         .ui-center {
+            flex-grow: 1;
+            justify-content: center;
+        }
+        .ui-right button {
+            font-family: 'Press Start 2P', Courier, monospace;
+            background-color: #8080FF;
+            color: #0A0A1E;
+            border: none;
+            padding: 6px 10px;
+            font-size: clamp(0.55rem, 1.8vw, 0.8rem);
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 2px 2px 0px #404080;
+        }
+        .ui-right button:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px #404080;
+        }
+        .info-item span {
+            color: #FFFFFF; 
+        }
+        .player-id-display {
+            font-size: clamp(0.5rem, 1.5vw, 0.7rem);
+            color: #9090CC; 
+            text-align: center;
+        }
+
+        #fishCaughtMessage { /* Estilo mantido como na versão 32 bits */
+            position: fixed;
+            top: 12%; 
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(20, 20, 50, 0.92); 
+            color: #FFFFDD; 
+            padding: 16px 28px;
+            border: 2px solid #8080FF; 
+            border-radius: 5px; 
+            font-size: clamp(0.95em, 2.9vw, 1.35em);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out, transform 0.3s ease-out;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0px 0px 18px rgba(128, 128, 255, 0.4);
+        }
+        #fishCaughtMessage.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+        #fishCaughtMessage img { width: 38px; height: 38px; image-rendering: pixelated; }
+
+        .controls-container { /* Estilo mantido como na versão 32 bits */ }
+        .control-button { /* Estilo mantido como na versão 32 bits */ }
+        .control-button:active { /* Estilo mantido como na versão 32 bits */ }
+        .control-button.empty { /* Estilo mantido como na versão 32 bits */ }
+
+        /* Estilo antigo para #loadingScreen e #nicknameScreen */
+        #loadingScreen, #nicknameScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1A1A2E; /* Fundo da primeira versão multiplayer */
+            color: #FFD700; /* Cor do texto da primeira versão multiplayer */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em; 
+            z-index: 200;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #nicknameScreen input {
+            font-family: 'Press Start 2P', Courier, monospace;
+            background-color: #4A4A70; /* Fundo do input da primeira versão multiplayer */
+            color: #FFFFFF;
+            border: 2px solid #FFD700; /* Borda do input da primeira versão multiplayer */
+            padding: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1em;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+        }
+        #nicknameScreen button {
+            font-family: 'Press Start 2P', Courier, monospace;
+            background-color: #FFD700; /* Fundo do botão da primeira versão multiplayer */
+            color: #1A1A2E; /* Cor do texto do botão da primeira versão multiplayer */
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 2px 2px 0px #D08000; /* Sombra do botão da primeira versão multiplayer */
+        }
+        #nicknameScreen button:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px #D08000;
+        }
+        
+        .hidden { display: none !important; }
+
+        /* Modal de Upgrades (mantido como na versão 32 bits) */
+        #upgradeModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(26, 26, 46, 0.95);
+            color: #D0D0FF;
+            border: 3px solid #8080FF;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 210;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0px 0px 20px rgba(128, 128, 255, 0.5);
+            text-align: center;
+        }
+        #upgradeModal h2 { font-size: clamp(1.1em, 3vw, 1.5em); color: #FFD700; margin-bottom: 20px; }
+        .upgrade-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #4A4A70; }
+        .upgrade-item:last-child { border-bottom: none; margin-bottom: 0; }
+        .upgrade-item p { font-size: clamp(0.7em, 2.2vw, 0.9em); margin-bottom: 8px; }
+        .upgrade-item span { color: #FFFFFF; }
+        .upgrade-item button { font-family: 'Press Start 2P', Courier, monospace; background-color: #FFD700; color: #1A1A2E; border: none; padding: 8px 15px; font-size: clamp(0.65em, 2vw, 0.85em); cursor: pointer; border-radius: 4px; box-shadow: 2px 2px 0px #D08000; margin-top: 5px; }
+        .upgrade-item button:disabled { background-color: #5A5A70; color: #303050; box-shadow: 2px 2px 0px #202030; cursor: not-allowed; }
+        .upgrade-item button:not(:disabled):active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #D08000; }
+        #closeUpgradeModal { margin-top: 20px; background-color: #B0B0FF; color: #0A0A1E; }
+
+    </style>
+</head>
+<body>
+    <div id="loadingScreen">
+        <p>A CARREGAR PESCADOR DE PIXELS</p>
+        <p id="loadingProgress">0%</p>
+    </div>
+
+    <div id="nicknameScreen" class="hidden">
+        <p>DIGITE O SEU NICKNAME:</p>
+        <input type="text" id="nicknameInput" maxlength="12" placeholder="PESCADOR16">
+        <button id="submitNicknameButton">ENTRAR NO MAR</button>
+    </div>
+
+    <div id="gameContainer" class="hidden">
+        <div class="game-ui-overlay">
+            <div class="ui-left">
+                <div class="info-item">PONTOS: <span id="score">0</span></div>
+            </div>
+            <div class="ui-center">
+                <div class="player-id-display">ID: <span id="playerIdDisplay">-</span></div>
+            </div>
+            <div class="ui-right">
+                <div class="info-item">ZONA: <span id="hotspotTimer">30</span>s</div>
+                <div class="info-item">PESCA: <span id="fishingTimerDisplay">5</span>s</div>
+                <button id="openUpgradeModalButton">UPGRADES</button>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="fishCaughtMessage" style="/* Estilos anteriores */ position: fixed; top: 12%; left: 50%; transform: translateX(-50%); background-color: rgba(20, 20, 50, 0.92); color: #FFFFDD; padding: 16px 28px; border: 2px solid #8080FF; border-radius: 5px; font-size: clamp(0.95em, 2.9vw, 1.35em); z-index: 100; opacity: 0; transition: opacity 0.4s ease-in-out, transform 0.3s ease-out; text-align: center; display: flex; align-items: center; gap: 14px; box-shadow: 0px 0px 18px rgba(128, 128, 255, 0.4);">
+            <img id="caughtFishSprite" src="" alt="Peixe Pescado" style="width: 38px; height: 38px; image-rendering: pixelated;">
+            <span id="caughtFishText"></span>
+        </div>
+
+        <div class="controls-container" id="mobileControls" style="/* Estilos anteriores */ position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 7px; width: 145px; height: 145px; z-index: 20;">
+            <div class="control-button empty"></div>
+            <div class="control-button" id="btnUp" style="/* Estilos anteriores */ background-color: rgba(40, 40, 80, 0.88); color: #B0B0FF; border: 2px solid #8080FF; border-radius: 5px; font-size: 1.9rem; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; box-shadow: 3px 3px 0px #202040; transition: background-color 0.1s ease, transform 0.05s ease;">▲</div>
+            <div class="control-button empty"></div>
+            <div class="control-button" id="btnLeft" style="/* Estilos anteriores */ background-color: rgba(40, 40, 80, 0.88); color: #B0B0FF; border: 2px solid #8080FF; border-radius: 5px; font-size: 1.9rem; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; box-shadow: 3px 3px 0px #202040; transition: background-color 0.1s ease, transform 0.05s ease;">◄</div>
+            <div class="control-button empty"></div>
+            <div class="control-button" id="btnRight" style="/* Estilos anteriores */ background-color: rgba(40, 40, 80, 0.88); color: #B0B0FF; border: 2px solid #8080FF; border-radius: 5px; font-size: 1.9rem; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; box-shadow: 3px 3px 0px #202040; transition: background-color 0.1s ease, transform 0.05s ease;">►</div>
+            <div class="control-button empty"></div>
+            <div class="control-button" id="btnDown" style="/* Estilos anteriores */ background-color: rgba(40, 40, 80, 0.88); color: #B0B0FF; border: 2px solid #8080FF; border-radius: 5px; font-size: 1.9rem; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; box-shadow: 3px 3px 0px #202040; transition: background-color 0.1s ease, transform 0.05s ease;">▼</div>
+            <div class="control-button empty"></div>
+        </div>
+    </div>
+
+    <div id="upgradeModal" class="hidden">
+        <h2>UPGRADES DISPONIVEIS</h2>
+        <div class="upgrade-item">
+            <p>VARA DE PESCA: Nivel <span id="rodLevelDisplay">1</span></p>
+            <p>Custo Proximo Nivel: <span id="rodUpgradeCostDisplay">50</span> pontos</p>
+            <button id="upgradeRodButton">MELHORAR VARA</button>
+        </div>
+        <div class="upgrade-item">
+            <p>VELOCIDADE DO BARCO: Nivel <span id="boatSpeedLevelDisplay">1</span></p>
+            <p>Custo Proximo Nivel: <span id="boatUpgradeCostDisplay">100</span> pontos</p>
+            <button id="upgradeBoatButton">MELHORAR BARCO</button>
+        </div>
+        <button id="closeUpgradeModal">FECHAR</button>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const hotspotTimerDisplay = document.getElementById('hotspotTimer');
+        const fishingTimerDisplay = document.getElementById('fishingTimerDisplay');
+        const fishCaughtMessageElement = document.getElementById('fishCaughtMessage');
+        const caughtFishSpriteElement = document.getElementById('caughtFishSprite');
+        const caughtFishTextElement = document.getElementById('caughtFishText');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingProgress = document.getElementById('loadingProgress');
+        const nicknameScreen = document.getElementById('nicknameScreen');
+        const nicknameInput = document.getElementById('nicknameInput');
+        const submitNicknameButton = document.getElementById('submitNicknameButton');
+        const gameContainer = document.getElementById('gameContainer');
+        const playerIdDisplay = document.getElementById('playerIdDisplay');
+
+        const upgradeModal = document.getElementById('upgradeModal');
+        const openUpgradeModalButton = document.getElementById('openUpgradeModalButton');
+        const closeUpgradeModal = document.getElementById('closeUpgradeModal');
+        const rodLevelDisplay = document.getElementById('rodLevelDisplay');
+        const rodUpgradeCostDisplay = document.getElementById('rodUpgradeCostDisplay');
+        const upgradeRodButton = document.getElementById('upgradeRodButton');
+        const boatSpeedLevelDisplay = document.getElementById('boatSpeedLevelDisplay');
+        const boatUpgradeCostDisplay = document.getElementById('boatUpgradeCostDisplay');
+        const upgradeBoatButton = document.getElementById('upgradeBoatButton');
+
+        const SPRITE_SIZE = 32; 
+        const PLAYER_SPRITE_WIDTH = 48; 
+        const PLAYER_SPRITE_HEIGHT = 32; 
+        const PLAYER_ANIMATION_SPEED = 0.35; 
+        const SEA_TILE_DRAW_SIZE = 64; 
+        const SEA_SCROLL_SPEED_X = 10; 
+        const SEA_SCROLL_SPEED_Y = 5;  
+        const HOTSPOT_PARTICLE_COUNT = 35; 
+        
+        let app, auth, db;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pixel-fisher-default';
+        let userId = null;
+        let playerNickname = "Pescador";
+        let players = {}; 
+        let gameUpdateInterval;
+        
+        function createPixelArtSvg(pixels, colors, pixelArrWidth, pixelArrHeight, svgWidth, svgHeight) {
+            const pixelSizeW = svgWidth / pixelArrWidth;
+            const pixelSizeH = svgHeight / pixelArrHeight;
+            let svg = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">`;
+            pixels.forEach((row, y) => {
+                row.forEach((colorIndex, x) => {
+                    if (colorIndex !== null && colorIndex < colors.length) {
+                        svg += `<rect x="${x * pixelSizeW}" y="${y * pixelSizeH}" width="${pixelSizeW}" height="${pixelSizeH}" fill="${colors[colorIndex]}" />`;
+                    }
+                });
+            });
+            svg += `</svg>`;
+            return `data:image/svg+xml;base64,${btoa(svg)}`;
+        }
+        const N = null; 
+        const playerSpriteColors = ['#9A6A42', '#6B4A2E', '#3060A0', '#FFC070', '#3A3A52', '#B0B0B0', '#FFFFFF', '#50A0D0']; 
+        const otherPlayerSpriteColors = ['#7A5230', '#503018', '#906038', '#204080', '#183060', '#D0A050', '#B08040', '#2A2A42', '#909090', '#B0B0B0', '#4080B0'];
+        const playerAnimationFrames = [ 
+            [[N,N,N,N,N,N,N,N,N,N,N,5],[N,N,N,N,N,4,4,N,N,N,5,N],[N,N,N,N,3,3,3,3,N,5,N,N],[N,N,N,2,2,2,2,2,5,N,N,N],[N,N,0,0,0,0,0,0,0,0,N,N],[N,1,1,0,0,0,0,0,0,1,N,N],[1,1,1,1,0,0,0,1,1,1,N,N],[N,N,1,1,1,1,1,1,1,N,N,N]], 
+            [[N,N,N,N,N,N,N,N,N,N,N,5],[N,N,N,N,N,4,4,N,N,N,5,N],[N,N,N,N,3,3,3,3,N,5,N,N],[N,N,N,2,2,2,2,2,5,N,N,N],[7,N,0,0,0,0,0,0,0,0,N,7],[7,1,1,0,0,0,0,0,0,1,7,N],[1,1,1,1,0,0,0,1,1,1,N,N],[N,7,1,1,1,1,1,1,1,7,N,N]], 
+            [[N,N,N,N,N,N,N,N,N,N,N,5],[N,N,N,N,N,4,4,N,N,N,5,N],[N,N,N,N,3,3,3,3,N,5,N,N],[N,N,N,2,2,2,2,2,5,N,N,N],[N,N,0,0,0,0,0,0,0,0,N,N],[N,1,1,0,0,0,0,0,0,1,N,N],[1,1,1,1,0,0,0,1,1,1,N,N],[N,N,1,1,1,1,1,1,1,N,N,N]], 
+             [[N,N,N,N,N,N,N,N,N,N,N,5],[N,N,N,N,N,4,4,N,N,N,5,N],[N,N,N,N,3,3,3,3,N,5,N,N],[N,N,N,2,2,2,2,2,5,N,N,N],[N,N,0,0,0,0,0,0,0,0,N,N],[N,1,1,0,0,0,0,0,0,1,N,N],[1,1,1,1,0,0,0,1,1,1,N,N],[N,N,1,1,1,1,1,1,1,N,N,N]] 
+        ];
+        const playerPixelArrayWidth = 12; 
+        const playerPixelArrayHeight = 8; 
+
+        const fishSpriteColors = { 
+            sardinha: ['#C0C0C0', '#A0A0A0', '#F0F0F0'], robalo: ['#40A0D0', '#2070A0', '#80D0F0'], atum: ['#FFA500', '#D08000', '#FFE070', '#000000'], baiacu: ['#FF6347', '#D04020', '#FFB0A0', '#FFFFFF', '#000000'], bota: ['#7A5230', '#503018', '#A07040'] 
+        };
+        const fishPixels = { 
+            sardinha: [[N,0,2,0,N],[0,1,1,1,0],[N,0,2,0,N]], 
+            robalo: [[N,N,0,2,0,N,N],[N,0,1,1,1,0,N],[0,1,2,1,2,1,0],[N,0,1,1,1,0,N],[N,N,0,2,0,N,N]], 
+            atum: [[N,N,0,2,0,0,N,N],[N,0,1,3,1,1,0,N],[0,1,2,1,2,1,1,0],[N,0,1,1,1,1,0,N],[N,N,0,2,0,0,N,N]], 
+            baiacu: [[N,3,N,3,N,3,N],[3,0,3,4,3,0,3],[N,3,0,1,0,3,N],[3,1,1,1,1,1,3],[N,3,1,1,1,3,N],[N,N,3,1,3,N,N]],
+            bota: [[0,2,N,N],[0,1,N,N],[0,1,1,1],[0,1,1,1],[N,0,0,N]]
+        };
+        
+        // Mar Original (da versão "Com Animações" - um tile estático)
+        const seaTileColors = ['#0074D9', '#005C9A', '#0088E0']; // Cor base, onda mais escura, onda mais clara
+        const seaTilePixels = [ 
+            [0,0,1,2,0,0,1,2], [0,1,2,0,0,1,2,0], [1,2,0,0,1,2,0,0], [2,0,0,1,2,0,0,1],
+            [0,0,1,2,0,0,1,2], [0,1,2,0,0,1,2,0], [1,2,0,0,1,2,0,0], [2,0,0,1,2,0,0,1],
+        ];
+        const seaTilePixelArraySize = 8;
+
+        const fishTypes = [ 
+            { id: 'sardinha', name: 'Sardinha Prateada', points: 10, baseRarity: 0.55 }, 
+            { id: 'robalo', name: 'Robalo Elétrico', points: 25, baseRarity: 0.28 }, 
+            { id: 'atum', name: 'Atum Flamejante', points: 50, baseRarity: 0.07 }, 
+            { id: 'baiacu', name: 'Baiacu Escarlate', points: 100, baseRarity: 0.013 }, 
+            { id: 'bota', name: 'Bota Gasta', points: -5, baseRarity: 0.15 }
+        ];
+
+        const assetsToLoad = [
+            { name: 'player_frames', type: 'player_animation', frames: playerAnimationFrames, colors: playerSpriteColors, frameWidth: playerPixelArrayWidth, frameHeight: playerPixelArrayHeight, svgWidth: PLAYER_SPRITE_WIDTH, svgHeight: PLAYER_SPRITE_HEIGHT },
+            { name: 'other_player_frames', type: 'player_animation', frames: playerAnimationFrames, colors: otherPlayerSpriteColors, frameWidth: playerPixelArrayWidth, frameHeight: playerPixelArrayHeight, svgWidth: PLAYER_SPRITE_WIDTH, svgHeight: PLAYER_SPRITE_HEIGHT },
+            { name: 'sea_tile', type: 'static_sprite', pixels: seaTilePixels, colors: seaTileColors, pixelArrWidth: seaTilePixelArraySize, pixelArrHeight: seaTilePixelArraySize, svgWidth: SEA_TILE_DRAW_SIZE, svgHeight: SEA_TILE_DRAW_SIZE },
+            ...fishTypes.map(f => ({ name: f.id, type: 'fish_sprite', fishData: f }))
+        ];
+        const images = {};
+        
+        const player = { 
+            x: 0, y: 0, 
+            width: PLAYER_SPRITE_WIDTH, height: PLAYER_SPRITE_HEIGHT, 
+            baseSpeed: 2.5, 
+            currentSpeed: 2.5,
+            sprites: [], 
+            animationFrameIndex: 0, 
+            animationTimer: 0, 
+            bobOffset: 0, 
+            bobDirection: 1,
+            score: 0, 
+            nickname: "Pescador",
+            rodLevel: 1,
+            boatSpeedLevel: 1
+        };
+
+        const rodUpgradeCosts = [0, 20, 70, 150, 300, 500]; 
+        const rodMaxLevel = rodUpgradeCosts.length -1;
+        const boatUpgradeCosts = [0, 50, 120, 250, 450, 700];
+        const boatMaxLevel = boatUpgradeCosts.length -1;
+        const boatSpeedIncrements = [0, 0.5, 0.75, 1.0, 1.25, 1.5]; 
+
+
+        let hotspots = [];
+        let HOTSPOT_RADIUS; 
+        let fishingTimer = 5;
+        const FISHING_INTERVAL = 5;
+        let hotspotChangeTimer = 30;
+        const HOTSPOT_DURATION = 30;
+        let keys = {};
+        let seaScrollX = 0;
+        let seaScrollY = 0; 
+        let gameRunning = false;
+        let authReady = false;
+
+        async function initFirebase() { /* Mesma lógica */ try{const firebaseConfig=JSON.parse(typeof __firebase_config!=='undefined'?__firebase_config:'{}');if(!firebaseConfig.apiKey){console.error("Configuração do Firebase em falta ou inválida!");loadingScreen.innerHTML="<p>ERRO: Falha ao carregar configuração.</p>";return;}app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,async(user)=>{if(user){userId=user.uid;console.log("Autenticado com ID:",userId);playerIdDisplay.textContent=userId.substring(0,8)+"...";authReady=true;await loadPlayerUpgrades();checkStartGame();}else{console.log("Utilizador não autenticado, a tentar login anónimo...");try{if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token){await signInWithCustomToken(auth,__initial_auth_token);console.log("Login com token personalizado bem-sucedido.");}else{await signInAnonymously(auth);console.log("Login anónimo bem-sucedido.");}}catch(error){console.error("Erro na autenticação anónima/token:",error);loadingScreen.innerHTML="<p>ERRO: Falha na autenticação.</p>";}}});}catch(e){console.error("Erro ao inicializar Firebase:",e);loadingScreen.innerHTML="<p>ERRO: Falha ao iniciar Firebase.</p>";} }
+        async function loadPlayerUpgrades() { /* Mesma lógica */ if(!userId||!db)return;const playerDocRef=doc(db,`artifacts/${appId}/public/data/pixelFisherPlayers/${userId}`);try{const docSnap=await getDoc(playerDocRef);if(docSnap.exists()){const data=docSnap.data();player.rodLevel=data.rodLevel||1;player.boatSpeedLevel=data.boatSpeedLevel||1;player.nickname=data.nickname||player.nickname;player.score=data.score||0;applyUpgrades();console.log("Upgrades carregados:",data);}else{console.log("Nenhum dado de upgrade encontrado para o jogador, usando padrões.");applyUpgrades();}}catch(error){console.error("Erro ao carregar upgrades do jogador:",error);applyUpgrades();}updateUpgradeUI(); }
+        function updatePlayerInFirestore() { /* Mesma lógica */ if(!userId||!db||!gameRunning)return;const playerDocRef=doc(db,`artifacts/${appId}/public/data/pixelFisherPlayers/${userId}`);const playerData={nickname:player.nickname,x:player.x,y:player.y,score:player.score,animationFrameIndex:player.animationFrameIndex,rodLevel:player.rodLevel,boatSpeedLevel:player.boatSpeedLevel,lastSeen:serverTimestamp()};setDoc(playerDocRef,playerData,{merge:true}).catch(error=>{console.error("Erro ao atualizar jogador no Firestore:",error);}); }
+        function listenForOtherPlayers() { /* Mesma lógica */ if(!db)return;const playersColRef=collection(db,`artifacts/${appId}/public/data/pixelFisherPlayers`);onSnapshot(playersColRef,(snapshot)=>{const newPlayersData={};snapshot.forEach((doc)=>{if(doc.id!==userId){newPlayersData[doc.id]=doc.data();}});players=newPlayersData;},(error)=>{console.error("Erro ao escutar outros jogadores:",error);}); }
+        function loadAssets() { /* Mesma lógica */ if(assetsToLoad.length===0){checkStartGame();return;}const totalAssetsToLoad=assetsToLoad.reduce((acc,asset)=>{if(asset.type==='player_animation')return acc+asset.frames.length;return acc+1;},0);let loadedAssetsCounter=0;assetsToLoad.forEach(asset=>{if(asset.type==='player_animation'){images[asset.name]=[];asset.frames.forEach((framePixels,index)=>{const img=new Image();img.onload=()=>{loadedAssetsCounter++;loadingProgress.textContent=`${Math.round((loadedAssetsCounter/totalAssetsToLoad)*100)}%`;if(loadedAssetsCounter===totalAssetsToLoad){loadingScreen.classList.add('hidden');nicknameScreen.classList.remove('hidden');}};img.onerror=()=>{console.error(`Erro ao carregar frame ${index} de ${asset.name}`);loadedAssetsCounter++;if(loadedAssetsCounter===totalAssetsToLoad){loadingScreen.classList.add('hidden');nicknameScreen.classList.remove('hidden');}};const pW=asset.frameWidths?asset.frameWidths[index]:(asset.frameWidth||asset.pixelArrWidth);const pH=asset.frameHeights?asset.frameHeights[index]:(asset.frameHeight||asset.pixelArrHeight);img.src=createPixelArtSvg(framePixels,asset.colors,pW,pH,asset.svgWidth,asset.svgHeight);images[asset.name].push(img);});}else if(asset.type==='static_sprite'||asset.type==='fish_sprite'){const img=new Image();const name=asset.type==='fish_sprite'?asset.fishData.id:asset.name;const pixels=asset.type==='fish_sprite'?fishPixels[name]:(asset.pixels||[[0]]);const colors=asset.type==='fish_sprite'?fishSpriteColors[name]:(asset.colors||['#FF00FF']);const pWidth=asset.type==='fish_sprite'?(pixels?pixels[0].length:1):asset.pixelArrWidth;const pHeight=asset.type==='fish_sprite'?(pixels?pixels.length:1):asset.pixelArrHeight;const sWidth=asset.type==='fish_sprite'?SPRITE_SIZE:asset.svgWidth;const sHeight=asset.type==='fish_sprite'?SPRITE_SIZE:asset.svgHeight;img.onload=()=>{loadedAssetsCounter++;loadingProgress.textContent=`${Math.round((loadedAssetsCounter/totalAssetsToLoad)*100)}%`;if(loadedAssetsCounter===totalAssetsToLoad){loadingScreen.classList.add('hidden');nicknameScreen.classList.remove('hidden');}};img.onerror=()=>{console.error(`Erro ao carregar ${name}`);loadedAssetsCounter++;if(loadedAssetsCounter===totalAssetsToLoad){loadingScreen.classList.add('hidden');nicknameScreen.classList.remove('hidden');}};if(pixels&&colors){img.src=createPixelArtSvg(pixels,colors,pWidth,pHeight,sWidth,sHeight);}else{console.error(`Pixels ou cores em falta para ${name}`);img.src=createPixelArtSvg([[0]],['#FF00FF'],1,1,sWidth,sHeight);}images[name]=img;}}); }
+        function resizeCanvas() { /* Mesma lógica */ canvas.width=window.innerWidth;canvas.height=window.innerHeight;HOTSPOT_RADIUS=Math.floor(Math.min(canvas.width,canvas.height)/8.5);if(player.x===0&&player.y===0){player.x=canvas.width/2-player.width/2;player.y=canvas.height/2-player.height/2;}player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));player.y=Math.max(0,Math.min(canvas.height-player.height,player.y));generateHotspot(); }
+        
+        function drawAnimatedSea(deltaTime) { 
+            const seaTileImg = images.sea_tile; 
+            if(seaTileImg && seaTileImg.complete){
+                const tileWidth=SEA_TILE_DRAW_SIZE;
+                const tileHeight=SEA_TILE_DRAW_SIZE;
+                for(let y=-seaScrollY; y < canvas.height; y+=tileHeight){
+                    for(let x=-seaScrollX; x < canvas.width; x+=tileWidth){
+                        ctx.drawImage(seaTileImg, Math.floor(x), Math.floor(y), tileWidth, tileHeight);
+                    }
+                }
+            } else {
+                ctx.fillStyle = seaTileColors[0] || '#0074D9'; 
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+            }
+        }
+
+        function drawPlayer() { /* Mesma lógica */ if(player.sprites&&player.sprites.length>0&&player.sprites[player.animationFrameIndex]&&player.sprites[player.animationFrameIndex].complete){ctx.drawImage(player.sprites[player.animationFrameIndex],player.x,player.y+player.bobOffset,player.width,player.height);ctx.fillStyle="#FFFFFF";ctx.textAlign="center";ctx.font="10px 'Press Start 2P'";ctx.fillText(player.nickname,player.x+player.width/2,player.y+player.bobOffset-5);}else{ctx.fillStyle=playerSpriteColors[0]||'#9A6A42';ctx.fillRect(player.x,player.y,player.width,player.height);ctx.fillStyle=playerSpriteColors[8]||'#A8A8A8';ctx.fillRect(player.x+player.width*0.8,player.y+player.height*0.1,5,player.height*0.8);}}
+        function drawOtherPlayers() { /* Mesma lógica */ const otherPlayerSpriteFrames=images['other_player_frames'];if(!otherPlayerSpriteFrames||otherPlayerSpriteFrames.length===0)return;for(const id in players){if(players.hasOwnProperty(id)&&id!==userId){const other=players[id];const frameIdx=other.animationFrameIndex||0;if(otherPlayerSpriteFrames[frameIdx]&&otherPlayerSpriteFrames[frameIdx].complete){ctx.drawImage(otherPlayerSpriteFrames[frameIdx],other.x,other.y,PLAYER_SPRITE_WIDTH,PLAYER_SPRITE_HEIGHT);ctx.fillStyle="#FFFFCC";ctx.textAlign="center";ctx.font="10px 'Press Start 2P'";ctx.fillText(other.nickname||"Pescador",other.x+PLAYER_SPRITE_WIDTH/2,other.y-5);}else{ctx.fillStyle=otherPlayerSpriteColors[0]||'#7A5230';ctx.fillRect(other.x,other.y,PLAYER_SPRITE_WIDTH,PLAYER_SPRITE_HEIGHT);}}} }
+        function drawHotspots(deltaTime) { /* Mesma lógica */ const hotspotBgAlpha=0.28+Math.sin(Date.now()/300)*0.12;hotspots.forEach(hotspot=>{ctx.beginPath();ctx.arc(hotspot.cx,hotspot.cy,hotspot.radius,0,Math.PI*2);ctx.fillStyle=`rgba(80,80,190,${hotspotBgAlpha})`;ctx.fill();hotspot.particles.forEach(p=>{p.x+=p.vx*deltaTime;p.y+=p.vy*deltaTime;p.life-=deltaTime;const distSq=(p.x-hotspot.cx)*(p.x-hotspot.cx)+(p.y-hotspot.cy)*(p.y-hotspot.cy);if(distSq>hotspot.radius*hotspot.radius*0.98||p.life<=0){const angle=Math.random()*2*Math.PI;const r=hotspot.radius*Math.sqrt(Math.random())*0.95;p.x=hotspot.cx+r*Math.cos(angle);p.y=hotspot.cy+r*Math.sin(angle);p.life=p.initialLife;p.vx=(Math.random()-0.5)*40;p.vy=(Math.random()-0.5)*40;}ctx.fillStyle=`rgba(220,255,255,${p.life/p.initialLife*0.98})`;ctx.fillRect(p.x-p.size/2,p.y-p.size/2,p.size,p.size);});}); }
+        function drawUI() { /* Mesma lógica */ scoreDisplay.textContent=player.score;hotspotTimerDisplay.textContent=Math.ceil(hotspotChangeTimer)+'s';fishingTimerDisplay.textContent=Math.ceil(fishingTimer)+'s'; }
+        function showFishCaughtMessage(fish) { /* Mesma lógica */ let mt=`PESCOU: ${fish.name.toUpperCase()}!`;if(fish.points>0)mt+=` +${fish.points}`;else if(fish.points<0)mt+=` ${fish.points}`;caughtFishTextElement.textContent=mt;if(images[fish.id]&&images[fish.id].complete){caughtFishSpriteElement.src=images[fish.id].src;caughtFishSpriteElement.style.display='inline-block';}else{caughtFishSpriteElement.style.display='none';}fishCaughtMessageElement.className='show';setTimeout(()=>{fishCaughtMessageElement.className='';},2500); }
+        function generateHotspot() { /* Mesma lógica */ hotspots=[];const nH=Math.random()<0.6?1:(Math.random()<0.85?2:3);for(let i=0;i<nH;i++){const newRadius=HOTSPOT_RADIUS*(Math.random()*0.25+0.9);const newHotspot={cx:Math.random()*(canvas.width-newRadius*2)+newRadius,cy:Math.random()*(canvas.height-newRadius*2)+newRadius,radius:newRadius,particles:[]};for(let j=0;j<HOTSPOT_PARTICLE_COUNT;j++){const life=Math.random()*2.0+0.8;const angle=Math.random()*2*Math.PI;const r=newHotspot.radius*Math.sqrt(Math.random())*0.98;newHotspot.particles.push({x:newHotspot.cx+r*Math.cos(angle),y:newHotspot.cy+r*Math.sin(angle),vx:(Math.random()-0.5)*40,vy:(Math.random()-0.5)*40,size:Math.random()*2.5+1.5,life:life,initialLife:life});}hotspots.push(newHotspot);} }
+        function isPlayerInHotspot() { /* Mesma lógica */ const playerCenterX=player.x+player.width/2;const playerCenterY=player.y+player.height/2;for(const hotspot of hotspots){const closestX=Math.max(player.x,Math.min(hotspot.cx,player.x+player.width));const closestY=Math.max(player.y,Math.min(hotspot.cy,player.y+player.height));const dX=hotspot.cx-closestX;const dY=hotspot.cy-closestY;const dSq=(dX*dX)+(dY*dY);if(dSq<=(hotspot.radius*hotspot.radius)){return true;}}return false; }
+        function attemptToFish() { /* Mesma lógica */ const iH=isPlayerInHotspot();let fP=[];fishTypes.forEach(f=>{let c=f.baseRarity;const rodBonus=1+(player.rodLevel-1)*0.15;if(f.id==='bota'){c=iH?0.01/rodBonus:0.10/rodBonus;}else{c=iH?f.baseRarity*rodBonus*1.8:f.baseRarity*rodBonus;}for(let i=0;i<Math.ceil(c*1000);i++)fP.push(f);});if(fP.length===0)fP.push(fishTypes.find(f=>f.id==='sardinha'));const rI=Math.floor(Math.random()*fP.length);const cF=fP[rI];if(cF){player.score+=cF.points;if(player.score<0)player.score=0;showFishCaughtMessage(cF);}fishingTimer=FISHING_INTERVAL; }
+        function updatePlayerPosition() { /* Mesma lógica */ let dX=0,dY=0;if(keys['w']||keys['ArrowUp'])dY-=player.currentSpeed;if(keys['s']||keys['ArrowDown'])dY+=player.currentSpeed;if(keys['a']||keys['ArrowLeft'])dX-=player.currentSpeed;if(keys['d']||keys['ArrowRight'])dX+=player.currentSpeed;if(dX!==0&&dY!==0){const l=Math.sqrt(dX*dX+dY*dY);dX=(dX/l)*player.currentSpeed;dY=(dY/l)*player.currentSpeed;}player.x+=dX;player.y+=dY;player.x=Math.max(0,Math.min(canvas.width-player.width,player.x));player.y=Math.max(0,Math.min(canvas.height-player.height,player.y)); }
+        function applyUpgrades() { /* Mesma lógica */ player.currentSpeed=player.baseSpeed+(boatSpeedIncrements[player.boatSpeedLevel]||0); }
+        function updateUpgradeUI() { /* Mesma lógica */ rodLevelDisplay.textContent=player.rodLevel;if(player.rodLevel<rodMaxLevel){rodUpgradeCostDisplay.textContent=`${rodUpgradeCosts[player.rodLevel+1]} pontos`;upgradeRodButton.disabled=player.score<rodUpgradeCosts[player.rodLevel+1];upgradeRodButton.textContent="MELHORAR VARA";}else{rodUpgradeCostDisplay.textContent="MAX";upgradeRodButton.disabled=true;upgradeRodButton.textContent="NIVEL MAXIMO";}boatSpeedLevelDisplay.textContent=player.boatSpeedLevel;if(player.boatSpeedLevel<boatMaxLevel){boatUpgradeCostDisplay.textContent=`${boatUpgradeCosts[player.boatSpeedLevel+1]} pontos`;upgradeBoatButton.disabled=player.score<boatUpgradeCosts[player.boatSpeedLevel+1];upgradeBoatButton.textContent="MELHORAR BARCO";}else{boatUpgradeCostDisplay.textContent="MAX";upgradeBoatButton.disabled=true;upgradeBoatButton.textContent="NIVEL MAXIMO";} }
+        upgradeRodButton.addEventListener('click', ()=>{if(player.rodLevel<rodMaxLevel&&player.score>=rodUpgradeCosts[player.rodLevel+1]){player.score-=rodUpgradeCosts[player.rodLevel+1];player.rodLevel++;applyUpgrades();updateUpgradeUI();updatePlayerInFirestore();}});
+        upgradeBoatButton.addEventListener('click', ()=>{if(player.boatSpeedLevel<boatMaxLevel&&player.score>=boatUpgradeCosts[player.boatSpeedLevel+1]){player.score-=boatUpgradeCosts[player.boatSpeedLevel+1];player.boatSpeedLevel++;applyUpgrades();updateUpgradeUI();updatePlayerInFirestore();}});
+        openUpgradeModalButton.addEventListener('click', ()=>{updateUpgradeUI();upgradeModal.classList.remove('hidden');});
+        closeUpgradeModal.addEventListener('click', ()=>{upgradeModal.classList.add('hidden');});
+
+        let lastTimestamp = 0;
+        function gameLoop(timestamp) { 
+            if(!gameRunning) return;
+            const deltaTime=(timestamp-lastTimestamp)/1000||0;
+            lastTimestamp=timestamp;
+            player.animationTimer+=deltaTime;
+            if(player.sprites&&player.sprites.length>0&&player.animationTimer>=PLAYER_ANIMATION_SPEED){
+                player.animationFrameIndex=(player.animationFrameIndex+1)%player.sprites.length;
+                player.animationTimer=0;
+            }
+            seaScrollX=(seaScrollX+SEA_SCROLL_SPEED_X*deltaTime)%SEA_TILE_DRAW_SIZE;
+            seaScrollY=(seaScrollY+SEA_SCROLL_SPEED_Y*deltaTime)%SEA_TILE_DRAW_SIZE;
+            updatePlayerPosition();
+            fishingTimer-=deltaTime;
+            if(fishingTimer<=0) attemptToFish();
+            hotspotChangeTimer-=deltaTime;
+            if(hotspotChangeTimer<=0){
+                generateHotspot();
+                hotspotChangeTimer=HOTSPOT_DURATION;
+            }
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            drawAnimatedSea(deltaTime);
+            drawHotspots(deltaTime);
+            drawOtherPlayers();
+            drawPlayer();
+            drawUI();
+            requestAnimationFrame(gameLoop); 
+        }
+
+        window.addEventListener('keydown', (e) => { if (e && e.key) { keys[e.key.toLowerCase()] = true; } });
+        window.addEventListener('keyup', (e) => { if (e && e.key) { keys[e.key.toLowerCase()] = false; } });
+        const btnUp=document.getElementById('btnUp'),btnDown=document.getElementById('btnDown'),btnLeft=document.getElementById('btnLeft'),btnRight=document.getElementById('btnRight');function handleBtn(k,p){keys[k.toLowerCase()]=p;}
+        ['pointerdown','pointerup','pointerleave'].forEach(evtType=>{const isP=evtType==='pointerdown';const isR=evtType==='pointerup'||evtType==='pointerleave';if(btnUp){btnUp.addEventListener(evtType,e=>{if(e.pointerType==='mouse'&&e.buttons!==1&&isP)return;if(isP)handleBtn('w',true);else if(isR)handleBtn('w',false);});}if(btnDown){btnDown.addEventListener(evtType,e=>{if(e.pointerType==='mouse'&&e.buttons!==1&&isP)return;if(isP)handleBtn('s',true);else if(isR)handleBtn('s',false);});}if(btnLeft){btnLeft.addEventListener(evtType,e=>{if(e.pointerType==='mouse'&&e.buttons!==1&&isP)return;if(isP)handleBtn('a',true);else if(isR)handleBtn('a',false);});}if(btnRight){btnRight.addEventListener(evtType,e=>{if(e.pointerType==='mouse'&&e.buttons!==1&&isP)return;if(isP)handleBtn('d',true);else if(isR)handleBtn('d',false);});}});
+        window.addEventListener('resize', resizeCanvas);
+        submitNicknameButton.addEventListener('click', async ()=>{const nick=nicknameInput.value.trim();if(nick&&nick.length>0&&nick.length<=12){player.nickname=nick;nicknameScreen.classList.add('hidden');gameContainer.classList.remove('hidden');await loadPlayerUpgrades(); checkStartGame();}else{alert("Nickname inválido! (1-12 caracteres)");}});
+        async function checkStartGame() { if(authReady&&!gameContainer.classList.contains('hidden')&&!gameRunning){startGameSession();}}
+        function startGameSession(){ if(gameRunning)return;gameRunning=true;player.sprites=images['player_frames']||[];if(player.sprites.length===0)console.warn("Sprites do jogador não carregados!");applyUpgrades();resizeCanvas();updatePlayerInFirestore();listenForOtherPlayers();if(gameUpdateInterval)clearInterval(gameUpdateInterval);gameUpdateInterval=setInterval(updatePlayerInFirestore,200);lastTimestamp=performance.now();requestAnimationFrame(gameLoop);console.log(`Pescador de Pixels Multiplayer iniciado como ${player.nickname} (ID: ${userId})!`); }
+        window.addEventListener('beforeunload', ()=>{if(userId&&db){const playerDocRef=doc(db,`artifacts/${appId}/public/data/pixelFisherPlayers/${userId}`);navigator.sendBeacon(`/firestore-cleanup/${appId}/${userId}`);}});
+        initFirebase(); 
+        loadAssets();   
+    </script>
+</body>
+</html>
